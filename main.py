@@ -2,15 +2,23 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 
+usr = input("Username? ")
+
 driver = webdriver.Firefox()
 
 driver.get("https://archiveofourown.org")
 
+#cb = WebDriverWait(driver, timeout=10).until(lambda d: d.find_element(By.ID, "tos_agree"))
+#cb.click()
+#
+#btn = WebDriverWait(driver, timeout=3).until(lambda d: d.find_element(By.CSS_SELECTOR, "#accept_tos:not([disabled])"))
+#btn.click()
+
 input("Please sign in")
 
-driver.get("https://archiveofourown.org/users/Samasaur/readings")
+driver.get(f"https://archiveofourown.org/users/{usr}/readings")
 
-last_page = int(input("Number of pages"))
+last_page = int(input("Number of pages? "))
 print(last_page)
 
 uniq_fic_count = 0
@@ -69,7 +77,7 @@ for work_number in range(1,21):
 
 for i in range(2, last_page + 1):
     print(f"processing page {i}")
-    driver.get(f"https://archiveofourown.org/users/Samasaur/readings?page={i}")
+    driver.get(f"https://archiveofourown.org/users/{usr}/readings?page={i}")
     WebDriverWait(driver, timeout=3).until(lambda d: d.find_element(By.CSS_SELECTOR, "#main ol.reading"))
     works = driver.find_elements(By.CSS_SELECTOR, f"#main > ol.reading > li.work")
     for work in works:
@@ -122,7 +130,7 @@ for i in range(2, last_page + 1):
     print(f"marked_for_later: {marked_for_later}")
     print(f"deleted_works: {deleted_works}")
 
-input()
+print("\n\nTOTAL\n\n")
 
 print(f"uniq_fic_count: {uniq_fic_count}")
 print(f"fic_count: {fic_count}")
