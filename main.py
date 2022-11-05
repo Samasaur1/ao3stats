@@ -34,6 +34,8 @@ longest_length = 0
 marked_for_later = 0
 deleted_works = 0
 
+authors = {}
+
 rl = WebDriverWait(driver, timeout=3).until(lambda d: d.find_element(By.CSS_SELECTOR, "#main ol.reading"))
 for work_number in range(1,21):
     #work = rl.find_element(By.CSS_SELECTOR, f":nth-child({work_number})")
@@ -67,6 +69,23 @@ for work_number in range(1,21):
     fic_count += vc
     uniq_word_count += wc
     word_count += vc * wc
+
+    author = lines[0].split(" ")[-1]
+    #fic_name = lines[0].split(" ")[0:-2]
+    _fics, _uniq_fics, _words, _uniq_words, _most_read_fic, _times_read, _longest_fic, _longest_length = authors.get(author, (0,0,0,0,"",0,"",0))
+    if vc > _times_read:
+        _ntr = vc
+        _nmrf = lines[0]
+    else:
+        _ntr = _times_read
+        _nmrf = _most_read_fic
+    if wc > _longest_length:
+        _nll = wc
+        _nlf = lines[0]
+    else:
+        _nll = _longest_length
+        _nlf = _longest_fic
+    authors[author] = (_fics + vc, _uniq_fics + 1, _words + vc * wc, _uniq_words + wc, _nmrf, _ntr, _nlf, _nll)
 
     if vc > most_reads:
         most_reads = vc
@@ -111,6 +130,24 @@ for i in range(2, last_page + 1):
         uniq_word_count += wc
         word_count += vc * wc
 
+        splline1 = lines[0].split(" ")
+        author = splline1[-1] if splline1[-2] == "by" else splline1[-3]
+        #fic_name = lines[0].split(" ")[0:-2]
+        _fics, _uniq_fics, _words, _uniq_words, _most_read_fic, _times_read, _longest_fic, _longest_length = authors.get(author, (0,0,0,0,"",0,"",0))
+        if vc > _times_read:
+            _ntr = vc
+            _nmrf = lines[0]
+        else:
+            _ntr = _times_read
+            _nmrf = _most_read_fic
+        if wc > _longest_length:
+            _nll = wc
+            _nlf = lines[0]
+        else:
+            _nll = _longest_length
+            _nlf = _longest_fic
+        authors[author] = (_fics + vc, _uniq_fics + 1, _words + vc * wc, _uniq_words + wc, _nmrf, _ntr, _nlf, _nll)
+
         if vc > most_reads:
             most_reads = vc
             most_read_fic = lines[0]
@@ -142,5 +179,17 @@ print(f"longest_fic: {longest_fic}")
 print(f"longest_length: {longest_length}")
 print(f"marked_for_later: {marked_for_later}")
 print(f"deleted_works: {deleted_works}")
+
+with open("authors.csv", "w") as file:
+    file.write("author,fics,uniq_fics,words,uniq_words,most_read_fic,times_read,longest_fic,longest_length\n")
+    for author, tup in authors.items():
+        file.write(author)
+        for el in tup:
+            if type(el) == str:
+                file.write(f",\"{el}\"")
+            else:
+                file.write(f",{el}")
+        file.write("\n")
+print(authors)
 
 driver.quit()
