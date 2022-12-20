@@ -80,10 +80,13 @@ def process_work(work):
         print(lines)
         return
     giftees = work.find_elements(By.CSS_SELECTOR, "div.header.module > h4.heading > a[href$=\"/gifts\"]")
+    _fandoms = work.find_elements(By.CSS_SELECTOR, "div.header.module > h5.fandoms.heading > a[href^=\"/tags/\"]")
+    fandoms = [fd.text for fd in _fandoms]
     print(lines[0])
     print(author)
     print(fic_name)
     print(giftees)
+    print(fandoms)
     _wc = work.find_element(By.CSS_SELECTOR, "dl.stats > dd.words").text
     wc = int(_wc.replace(",", ""))
     uniq_fic_count += 1
