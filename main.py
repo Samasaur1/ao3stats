@@ -1,3 +1,5 @@
+import json
+
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -22,100 +24,88 @@ driver.get(f"https://archiveofourown.org/users/{usr}/readings")
 last_page = int(input("Number of pages? "))
 # print(last_page)
 
-uniq_fic_count = 0
-fic_count = 0
-uniq_word_count = 0
-word_count = 0
-
-most_read_fic = ""
-most_reads = 0
-longest_fic = ""
-longest_length = 0
-
-marked_for_later = 0
+works = []
 deleted_works = 0
 
-authors = {}
+class Work:
+    def __init__(self,
+                 title: str,
+                 authors: list[str],
+                 giftees: list[str],
+                 fandoms: list[str],
+                 series: dict[str, int],
+                 word_count: int,
+                 view_count: int,
+                 marked_for_later: bool):
+        self.title = title
+        self.authors = authors
+        self.giftees = giftees
+        self.fandoms = fandoms
+        self.word_count = word_count
+        self.view_count = view_count
+        self.marked_for_later = marked_for_later
 
 def process_page():
-    WebDriverWait(driver, timeout=3).until(lambda d: d.find_element(By.CSS_SELECTOR, "#main ol.reading"))
-    works = driver.find_elements(By.CSS_SELECTOR, f"#main > ol.reading > li.work")
-    for work in works:
-        process_work(work)
-
-def process_work(work):
-    global uniq_fic_count
-    global fic_count
-    global uniq_word_count
-    global word_count
-    global most_read_fic
-    global most_reads
-    global longest_fic
-    global longest_length
-    global marked_for_later
     global deleted_works
-    global authors
+    WebDriverWait(driver, timeout=3).until(lambda d: d.find_element(By.CSS_SELECTOR, "#main ol.reading"))
+    page_works = driver.find_elements(By.CSS_SELECTOR, f"#main > ol.reading > li.work")
+    for work in page_works:
+        w = process_work(work)
+        if w is None:
+            deleted_works += 1
+        else:
+            works.append(w)
+
+def process_work(work) -> Work | None:
+    title = ""
+    authors = []
+    giftees = []
+    fandoms = []
+    word_count = 0
+    view_count = 0
+    marked_for_later = False
+
     lines = work.text.split('\n')
+    # print(lines)
     if len(lines) == 1 and "Deleted work" in lines[0]:
-        deleted_works += 1
-        return
+        # deleted_works += 1
+        return None
     visits = lines[-1]
+    # print(visits)
     if "(Marked for Later.)" in visits:
-        marked_for_later += 1
-        return
+        marked_for_later = True
     if visits[-4:] == "once":
-        vc = 1
+        view_count = 1
     else:
         words = visits.split(' ')
-        vc = int(words[-2])
+        # print(words)
+        view_count = int(words[-5 if marked_for_later else -2])
+
     _authors = work.find_elements(By.CSS_SELECTOR, "div.header.module > h4.heading > a[rel=\"author\"]")
     if len(_authors) == 0:
-        author = "Anonymous"
+        authors = []
     else:
-        author = " ".join([x.text for x in _authors])
+        authors = [aut.text for aut in _authors]
+
     try:
-        fic_name = work.find_element(By.CSS_SELECTOR, "div.header.module > h4.heading > a[href^=\"/works/\"]").text
+        title = work.find_element(By.CSS_SELECTOR, "div.header.module > h4.heading > a[href^=\"/works/\"]").text
     except NoSuchElementException:
         print("no fic name?")
         print(lines)
         return
-    giftees = work.find_elements(By.CSS_SELECTOR, "div.header.module > h4.heading > a[href$=\"/gifts\"]")
+
+    _giftees = work.find_elements(By.CSS_SELECTOR, "div.header.module > h4.heading > a[href$=\"/gifts\"]")
+    giftees = [g.text for g in _giftees]
+
     _fandoms = work.find_elements(By.CSS_SELECTOR, "div.header.module > h5.fandoms.heading > a[href^=\"/tags/\"]")
     fandoms = [fd.text for fd in _fandoms]
-    print(lines[0])
-    print(author)
-    print(fic_name)
-    print(giftees)
-    print(fandoms)
+
     _wc = work.find_element(By.CSS_SELECTOR, "dl.stats > dd.words").text
-    wc = int(_wc.replace(",", ""))
-    uniq_fic_count += 1
-    fic_count += vc
-    uniq_word_count += wc
-    word_count += vc * wc
+    word_count = int(_wc.replace(",", ""))
 
-    _fics, _uniq_fics, _words, _uniq_words, _most_read_fic, _times_read, _longest_fic, _longest_length = authors.get(author, (0,0,0,0,"",0,"",0))
-    if vc > _times_read:
-        _ntr = vc
-        _nmrf = f"{fic_name} by {author}"
-    else:
-        _ntr = _times_read
-        _nmrf = _most_read_fic
-    if wc > _longest_length:
-        _nll = wc
-        _nlf = f"{fic_name} by {author}"
-    else:
-        _nll = _longest_length
-        _nlf = _longest_fic
-    authors[author] = (_fics + vc, _uniq_fics + 1, _words + vc * wc, _uniq_words + wc, _nmrf, _ntr, _nlf, _nll)
 
-    if vc > most_reads:
-        most_reads = vc
-        most_read_fic = f"{fic_name} by {author}"
-    if wc > longest_length:
-        longest_length = wc
-        longest_fic = f"{fic_name} by {author}"
-
+    current_work = Work(title, authors, giftees, fandoms, word_count, view_count, marked_for_later)
+    return current_work
 
 process_page()
 
@@ -124,41 +114,15 @@ for i in range(2, last_page + 1):
     driver.get(f"https://archiveofourown.org/users/{usr}/readings?page={i}")
     process_page()
 
-    print(f"uniq_fic_count: {uniq_fic_count}")
-    print(f"fic_count: {fic_count}")
-    print(f"uniq_word_count: {uniq_word_count}")
-    print(f"word_count: {word_count}")
-    print(f"most_read_fic: {most_read_fic}")
-    print(f"most_reads: {most_reads}")
-    print(f"longest_fic: {longest_fic}")
-    print(f"longest_length: {longest_length}")
-    print(f"marked_for_later: {marked_for_later}")
-    print(f"deleted_works: {deleted_works}")
+print(f"{deleted_works} deleted work(s)")
 
-print("\n\nTOTAL\n\n")
+# while True:
+#     eval(input("> "))
 
-print(f"uniq_fic_count: {uniq_fic_count}")
-print(f"fic_count: {fic_count}")
-print(f"uniq_word_count: {uniq_word_count}")
-print(f"word_count: {word_count}")
-print(f"most_read_fic: {most_read_fic}")
-print(f"most_reads: {most_reads}")
-print(f"longest_fic: {longest_fic}")
-print(f"longest_length: {longest_length}")
-print(f"marked_for_later: {marked_for_later}")
-print(f"deleted_works: {deleted_works}")
+print(json.dumps([work.__dict__ for work in works], indent=4))
 
-with open("authors.csv", "w") as file:
-    file.write("author,fics,uniq_fics,words,uniq_words,most_read_fic,times_read,longest_fic,longest_length\n")
-    for author, tup in authors.items():
-        file.write(author)
-        for el in tup:
-            if type(el) == str:
-                file.write(f",\"{el}\"")
-            else:
-                file.write(f",{el}")
-        file.write("\n")
-print(authors)
+with open("works.json", "w") as file:
+    json.dump([work.__dict__ for work in works], file, indent=4)
 
 driver.quit()
 
