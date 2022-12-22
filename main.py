@@ -41,6 +41,7 @@ class Work:
         self.authors = authors
         self.giftees = giftees
         self.fandoms = fandoms
+        self.series = series
         self.word_count = word_count
         self.view_count = view_count
         self.marked_for_later = marked_for_later
@@ -103,8 +104,22 @@ def process_work(work) -> Work | None:
     _wc = work.find_element(By.CSS_SELECTOR, "dl.stats > dd.words").text
     word_count = int(_wc.replace(",", ""))
 
+    series = {}
+    series_elements = work.find_elements(By.CSS_SELECTOR, "ul.series > li")
+    # print(series_elements)
+    # print([x.text for x in series_elements])
+    for series_element in series_elements:
+        _number = series_element.find_element(By.CSS_SELECTOR, "strong").text
+        number = int(_number.replace(",", ""))
+        name = series_element.find_element(By.CSS_SELECTOR, "a").text
+        series[name] = number
+        # print(_number)
+        # print(number)
+        # print(name)
 
-    current_work = Work(title, authors, giftees, fandoms, word_count, view_count, marked_for_later)
+    # print(series)
+
+    current_work = Work(title, authors, giftees, fandoms, series, word_count, view_count, marked_for_later)
     return current_work
 
 process_page()

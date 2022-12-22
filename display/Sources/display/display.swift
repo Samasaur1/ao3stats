@@ -6,12 +6,13 @@ public struct Work: Codable {
     let authors: [String]
     let giftees: [String]
     let fandoms: [String]
+    let series: [String: Int]
     let wordCount: Int
     let viewCount: Int
     let markedForLater: Bool
 
     enum CodingKeys: String, CodingKey {
-        case title, authors, giftees, fandoms
+        case title, authors, giftees, fandoms, series
         case wordCount = "word_count"
         case viewCount = "view_count"
         case markedForLater = "marked_for_later"
