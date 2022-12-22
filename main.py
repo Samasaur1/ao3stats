@@ -75,7 +75,7 @@ def process_work(work) -> Work | None:
     # print(visits)
     if "(Marked for Later.)" in visits:
         marked_for_later = True
-    if visits[-4:] == "once":
+    if "once" in visits:
         view_count = 1
     else:
         words = visits.split(' ')
