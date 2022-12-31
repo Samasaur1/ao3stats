@@ -134,7 +134,7 @@ print(f"{deleted_works} deleted work(s)")
 # while True:
 #     eval(input("> "))
 
-print(json.dumps([work.__dict__ for work in works], indent=4))
+# print(json.dumps([work.__dict__ for work in works], indent=4))
 
 with open("works.json", "w") as file:
     json.dump([work.__dict__ for work in works], file, indent=4)
