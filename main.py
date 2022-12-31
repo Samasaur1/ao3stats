@@ -17,11 +17,11 @@ driver.get("https://archiveofourown.org")
 #btn = WebDriverWait(driver, timeout=3).until(lambda d: d.find_element(By.CSS_SELECTOR, "#accept_tos:not([disabled])"))
 #btn.click()
 
-input("Please sign in")
+input("Please sign in, then press Enter")
 
 driver.get(f"https://archiveofourown.org/users/{usr}/readings")
 
-last_page = int(input("Number of pages? "))
+last_page = int(input("Number of pages in history? "))
 # print(last_page)
 
 works = []
