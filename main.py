@@ -1,9 +1,9 @@
 import json
 
 from selenium import webdriver
+from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.common.exceptions import NoSuchElementException
 
 usr = input("Username? ")
 
@@ -29,6 +29,7 @@ deleted_works = 0
 
 class Work:
     def __init__(self,
+                 work_id: str,
                  title: str,
                  authors: list[str],
                  giftees: list[str],
@@ -36,7 +37,11 @@ class Work:
                  series: dict[str, int],
                  word_count: int,
                  view_count: int,
-                 marked_for_later: bool):
+                 marked_for_later: bool,
+                 last_visit: str,
+                 most_recent_update: str,
+                 changes_since_last_view: str):
+        self.work_id = work_id
         self.title = title
         self.authors = authors
         self.giftees = giftees
@@ -45,6 +50,9 @@ class Work:
         self.word_count = word_count
         self.view_count = view_count
         self.marked_for_later = marked_for_later
+        self.last_visit = last_visit
+        self.most_recent_update = most_recent_update
+        self.changes_since_last_view = changes_since_last_view
 
 def process_page():
     global deleted_works
@@ -58,12 +66,16 @@ def process_page():
             works.append(w)
 
 def process_work(work) -> Work | None:
+    work_id = ""
     title = ""
     authors = []
     giftees = []
     fandoms = []
     word_count = 0
     view_count = 0
+    last_visit = ""
+    most_recent_update = ""
+    changes_since_last_view = ""
     marked_for_later = False
 
     lines = work.text.split('\n')
@@ -75,12 +87,16 @@ def process_work(work) -> Work | None:
     # print(visits)
     if "(Marked for Later.)" in visits:
         marked_for_later = True
+    words = visits.split(' ')
     if "once" in visits:
         view_count = 1
     else:
-        words = visits.split(' ')
-        # print(words)
         view_count = int(words[-5 if marked_for_later else -2])
+
+    last_visit = words[2:5]
+    changes_since_last_view = visits.split('(')[1].split(')')[0]
+
+    work_id = work.get_attribute("id").split('_')[1]
 
     _authors = work.find_elements(By.CSS_SELECTOR, "div.header.module > h4.heading > a[rel=\"author\"]")
     if len(_authors) == 0:
@@ -119,7 +135,9 @@ def process_work(work) -> Work | None:
 
     # print(series)
 
-    current_work = Work(title, authors, giftees, fandoms, series, word_count, view_count, marked_for_later)
+    most_recent_update = work.find_element(By.CSS_SELECTOR, "div.header.module > p.datetime").text
+
+    current_work = Work(work_id, title, authors, giftees, fandoms, series, word_count, view_count, marked_for_later, most_recent_update, changes_since_last_view)
     return current_work
 
 process_page()
