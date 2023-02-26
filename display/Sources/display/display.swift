@@ -24,6 +24,7 @@ public struct DisplayStats: ParsableCommand {
     @Argument var worksFile: String = "works.json"
     @Option var author: String? = nil
     @Option var fandom: String? = nil
+    @Option var work: String? = nil
 
     public init() {}
 
@@ -178,6 +179,15 @@ public struct DisplayStats: ParsableCommand {
                   """)
             let mostProlificAuthor = authorsToWorks.mapValues { $0.filter { $0.fandoms.contains(fandom) }.count }.max { $0.value < $1.value }!
             print("Most prolific author: \(mostProlificAuthor.key) (\(mostProlificAuthor.value) works)")
+        }
+
+        print("===")
+        if let work = work {
+            guard let w = allWorks.first(where: { $0.title == work }) else {
+                print("Cannot find work '\(work)'")
+                return
+            }
+            dump(w)
         }
     }
 }
