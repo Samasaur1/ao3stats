@@ -1,9 +1,10 @@
 import json
 
 from selenium import webdriver
-from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.common.exceptions import NoSuchElementException
+import itertools
 
 usr = input("Username? ")
 
@@ -93,7 +94,7 @@ def process_work(work) -> Work | None:
     else:
         view_count = int(words[-5 if marked_for_later else -2])
 
-    last_visit = words[2:5]
+    last_visit = " ".join(words[2:5])
     changes_since_last_view = visits.split('(')[1].split(')')[0]
 
     work_id = work.get_attribute("id").split('_')[1]
@@ -137,7 +138,7 @@ def process_work(work) -> Work | None:
 
     most_recent_update = work.find_element(By.CSS_SELECTOR, "div.header.module > p.datetime").text
 
-    current_work = Work(work_id, title, authors, giftees, fandoms, series, word_count, view_count, marked_for_later, most_recent_update, changes_since_last_view)
+    current_work = Work(work_id, title, authors, giftees, fandoms, series, word_count, view_count, marked_for_later, last_visit, most_recent_update, changes_since_last_view)
     return current_work
 
 process_page()
