@@ -129,7 +129,11 @@ def process_work(work) -> Work | None:
     fandoms = [fd.text for fd in _fandoms]
 
     _wc = work.find_element(By.CSS_SELECTOR, "dl.stats > dd.words").text
-    word_count = int(_wc.replace(",", ""))
+    if _wc == "":
+        word_count = 0
+        print(f"ERROR: no word count for fic '{title}'")
+    else:
+        word_count = int(_wc.replace(",", ""))
 
     series = {}
     series_elements = work.find_elements(By.CSS_SELECTOR, "ul.series > li")
