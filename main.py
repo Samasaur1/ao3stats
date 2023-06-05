@@ -43,7 +43,8 @@ class Work:
                  last_visit: str,
                  most_recent_update: str,
                  changes_since_last_view: str,
-                 rating: str):
+                 rating: str,
+                 chapters: str):
         self.work_id = work_id
         self.title = title
         self.authors = authors
@@ -57,6 +58,7 @@ class Work:
         self.most_recent_update = most_recent_update
         self.changes_since_last_view = changes_since_last_view
         self.rating = rating
+        self.chapters = chapters
 
 def process_page():
     global deleted_works
@@ -87,6 +89,7 @@ def process_work(work) -> Work | None:
     rating = ""
     word_count = 0
     view_count = 0
+    chapters = 0
     last_visit = ""
     most_recent_update = ""
     changes_since_last_view = ""
@@ -141,6 +144,8 @@ def process_work(work) -> Work | None:
     else:
         word_count = int(_wc.replace(",", ""))
 
+    chapters = work.find_element(By.CSS_SELECTOR, "dl.stats > dd.chapters").text
+
     series = {}
     series_elements = work.find_elements(By.CSS_SELECTOR, "ul.series > li")
     # print(series_elements)
@@ -158,7 +163,7 @@ def process_work(work) -> Work | None:
 
     most_recent_update = work.find_element(By.CSS_SELECTOR, "div.header.module > p.datetime").text
 
-    current_work = Work(work_id, title, authors, giftees, fandoms, series, word_count, view_count, marked_for_later, last_visit, most_recent_update, changes_since_last_view, rating)
+    current_work = Work(work_id, title, authors, giftees, fandoms, series, word_count, view_count, marked_for_later, last_visit, most_recent_update, changes_since_last_view, rating, chapters)
     return current_work
 
 process_page()
@@ -187,3 +192,4 @@ driver.quit()
 # my first page loop and second page loop are almost identical. revise 1st page loop to actually loop over work elements, not hardcoded 1...20
 # rating: `li.work > div.header.module > ul.required-tags > li:first-child > a > span.rating`
 # rating: `li.work > div.header.module > ul.required-tags span.rating`
+# chapters: `li.work > dl.stats > dd.chapters` (can contain link)
