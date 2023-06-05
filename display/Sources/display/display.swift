@@ -2,19 +2,30 @@ import ArgumentParser
 import Foundation
 
 public struct Work: Codable {
+    let workID: String
     let title: String
+    let rating: String
     let authors: [String]
     let giftees: [String]
     let fandoms: [String]
     let series: [String: Int]
     let wordCount: Int
     let viewCount: Int
+    let chapters: String
+    let lastVisit: String
+    let mostRecentUpdate: String
+    let changesSinceLastView: String
     let markedForLater: Bool
 
     enum CodingKeys: String, CodingKey {
-        case title, authors, giftees, fandoms, series
+        case workID = "work_id"
+        case title, rating, authors, giftees, fandoms, series
         case wordCount = "word_count"
         case viewCount = "view_count"
+        case chapters
+        case lastVisit = "last_visit"
+        case mostRecentUpdate = "most_recent_update"
+        case changesSinceLastView = "changes_since_last_view"
         case markedForLater = "marked_for_later"
     }
 }
