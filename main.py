@@ -1,4 +1,5 @@
 import json
+import time
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -57,7 +58,16 @@ class Work:
 
 def process_page():
     global deleted_works
-    WebDriverWait(driver, timeout=3).until(lambda d: d.find_element(By.CSS_SELECTOR, "#main ol.reading"))
+    while True:
+        try:
+            WebDriverWait(driver, timeout=3).until(lambda d: d.find_element(By.CSS_SELECTOR, "#main ol.reading"))
+            break
+        except:
+            print("Could not fetch page; presumably we are rate-limited")
+            print("Sleeping for 5 minutes")
+            time.sleep(5 * 60)
+            driver.refresh()
+            continue
     page_works = driver.find_elements(By.CSS_SELECTOR, f"#main > ol.reading > li.work")
     for work in page_works:
         w = process_work(work)
