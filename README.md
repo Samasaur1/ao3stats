@@ -51,3 +51,11 @@ Now you can do the following:
 By default, running `./stats` with no arguments produces a summary on a file named `works.json` in the current folder. If you want, you can generate statistics for an old data dump by putting the name of that file as the first argument (e.g., `./stats old-works.json`).
 
 You can also get specific stats on an author and/or a fandom. For example: `./stats --fandom "GitHub"` or `./stats --author "Octocat"`.
+
+## Using `jq` to dump the works database
+
+```
+jp '.' works.json
+jq '. | map(select(.authors[0] == "Samasaur1"))' works.json
+jq '. | map(select(.changes_since_last_view != "Latest version."))' works.json
+```
