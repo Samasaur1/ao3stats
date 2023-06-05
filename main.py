@@ -42,7 +42,8 @@ class Work:
                  marked_for_later: bool,
                  last_visit: str,
                  most_recent_update: str,
-                 changes_since_last_view: str):
+                 changes_since_last_view: str,
+                 rating: str):
         self.work_id = work_id
         self.title = title
         self.authors = authors
@@ -55,6 +56,7 @@ class Work:
         self.last_visit = last_visit
         self.most_recent_update = most_recent_update
         self.changes_since_last_view = changes_since_last_view
+        self.rating = rating
 
 def process_page():
     global deleted_works
@@ -82,6 +84,7 @@ def process_work(work) -> Work | None:
     authors = []
     giftees = []
     fandoms = []
+    rating = ""
     word_count = 0
     view_count = 0
     last_visit = ""
@@ -128,6 +131,9 @@ def process_work(work) -> Work | None:
     _fandoms = work.find_elements(By.CSS_SELECTOR, "div.header.module > h5.fandoms.heading > a[href^=\"/tags/\"]")
     fandoms = [fd.text for fd in _fandoms]
 
+    _rating = work.find_element(By.CSS_SELECTOR, "div.header.module > ul.required-tags span.rating")
+    rating = _rating.get_attribute("title")
+
     _wc = work.find_element(By.CSS_SELECTOR, "dl.stats > dd.words").text
     if _wc == "":
         word_count = 0
@@ -152,7 +158,7 @@ def process_work(work) -> Work | None:
 
     most_recent_update = work.find_element(By.CSS_SELECTOR, "div.header.module > p.datetime").text
 
-    current_work = Work(work_id, title, authors, giftees, fandoms, series, word_count, view_count, marked_for_later, last_visit, most_recent_update, changes_since_last_view)
+    current_work = Work(work_id, title, authors, giftees, fandoms, series, word_count, view_count, marked_for_later, last_visit, most_recent_update, changes_since_last_view, rating)
     return current_work
 
 process_page()
@@ -179,3 +185,5 @@ driver.quit()
 # fic name: `li.work > div.header.module > h4.heading > a[href^="/works/"]` (str)
 # giftee(s?): `li.work > div.header.module > h4.heading > a[href$="/gifts"]` (str)
 # my first page loop and second page loop are almost identical. revise 1st page loop to actually loop over work elements, not hardcoded 1...20
+# rating: `li.work > div.header.module > ul.required-tags > li:first-child > a > span.rating`
+# rating: `li.work > div.header.module > ul.required-tags span.rating`
