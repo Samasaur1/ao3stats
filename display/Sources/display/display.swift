@@ -46,6 +46,7 @@ public struct DisplayStats: ParsableCommand {
         }
 
         let works = allWorks.filter { (!$0.markedForLater) }
+        let markedForLater = allWorks.filter { $0.markedForLater }
 
         guard let longestWork = works.max(by: { $0.wordCount < $1.wordCount }) else {
             fatalError()
@@ -59,7 +60,7 @@ public struct DisplayStats: ParsableCommand {
         let wordCount = works.map { $0.wordCount * $0.viewCount }.sum
 
         print("""
-              uniq_fic_count: \(uniqueFicCount)
+              uniq_fic_count: \(uniqueFicCount) (\(markedForLater.count) marked for later)
               fic_count: \(ficCount)
               uniq_word_count: \(uniqueWordCount)
               word_count: \(wordCount)
