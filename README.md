@@ -6,7 +6,7 @@ Scrape your history from AO3, and then get some statistics from that data.
 
 ### Requirements
 
-ao3stats requires Python 3, Swift 5.5 or later, Firefox, and an internet connection.
+ao3stats requires Python 3.10 or later, Swift 5.5 or later, Firefox, and an internet connection.
 
 ### Structure
 
