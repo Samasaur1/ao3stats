@@ -5,7 +5,7 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import NoSuchElementException
-import itertools
+# import itertools
 
 usr = input("Username? ")
 
@@ -13,11 +13,11 @@ driver = webdriver.Firefox()
 
 driver.get("https://archiveofourown.org")
 
-#cb = WebDriverWait(driver, timeout=10).until(lambda d: d.find_element(By.ID, "tos_agree"))
-#cb.click()
+# cb = WebDriverWait(driver, timeout=10).until(lambda d: d.find_element(By.ID, "tos_agree"))
+# cb.click()
 #
-#btn = WebDriverWait(driver, timeout=3).until(lambda d: d.find_element(By.CSS_SELECTOR, "#accept_tos:not([disabled])"))
-#btn.click()
+# btn = WebDriverWait(driver, timeout=3).until(lambda d: d.find_element(By.CSS_SELECTOR, "#accept_tos:not([disabled])"))
+# btn.click()
 
 input("Please sign in, then press Enter")
 

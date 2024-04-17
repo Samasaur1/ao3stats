@@ -2,6 +2,8 @@
 
 Scrape your history from AO3, and then get some statistics from that data.
 
+`nix develop -c bash -c "scrape && stats works.json"`
+
 ## General Overview
 
 ### Requirements
