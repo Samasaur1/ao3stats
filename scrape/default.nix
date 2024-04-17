@@ -3,6 +3,7 @@
 (writers.writePython3Bin "scrape" {
   libraries = with python3Packages; [
     selenium
+    tqdm
   ];
   flakeIgnore = [ "E501" "F541" "E302" "E305" "E722" ];
   # flakeIgnore = [ "E261" "E262" "E302" "E501" "E722" "F541" "W292" ];

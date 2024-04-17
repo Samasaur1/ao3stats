@@ -5,6 +5,8 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import NoSuchElementException
+
+from tqdm import tqdm
 # import itertools
 
 usr = input("Username? ")
@@ -71,13 +73,13 @@ def process_page():
             WebDriverWait(driver, timeout=3).until(lambda d: d.find_element(By.CSS_SELECTOR, "#main ol.reading"))
             break
         except:
-            print("Could not fetch page; presumably we are rate-limited")
-            print("Sleeping for 5 minutes")
+            # print("Could not fetch page; presumably we are rate-limited")
+            # print("Sleeping for 5 minutes")
             time.sleep(5 * 60)
             driver.refresh()
             continue
     page_works = driver.find_elements(By.CSS_SELECTOR, f"#main > ol.reading > li.work")
-    for work in page_works:
+    for work in tqdm(page_works, desc="Processing works on page", leave=False):
         w = process_work(work)
         if w is None:
             deleted_works += 1
@@ -128,8 +130,9 @@ def process_work(work) -> Work | None:
     try:
         title = work.find_element(By.CSS_SELECTOR, "div.header.module > h4.heading > a[href^=\"/works/\"]").text
     except NoSuchElementException:
-        print("no fic name?")
-        print(lines)
+        # TODO: generally this means the fic has been moved to a hidden collection
+        # print("no fic name?")
+        # print(lines)
         return
 
     _giftees = work.find_elements(By.CSS_SELECTOR, "div.header.module > h4.heading > a[href$=\"/gifts\"]")
@@ -172,8 +175,7 @@ def process_work(work) -> Work | None:
 
 process_page()
 
-for i in range(2, last_page + 1):
-    print(f"processing page {i}")
+for i in tqdm(range(2, last_page + 1), desc="Processing pages"):
     driver.get(f"https://archiveofourown.org/users/{usr}/readings?page={i}")
     process_page()
 
