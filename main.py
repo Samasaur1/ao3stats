@@ -23,7 +23,11 @@ input("Please sign in, then press Enter")
 
 driver.get(f"https://archiveofourown.org/users/{usr}/readings")
 
-last_page = int(input("Number of pages in history? "))
+WebDriverWait(driver, timeout=3).until(lambda d: d.find_element(By.CSS_SELECTOR, "#main ol.pagination"))
+last_page = driver.find_element(By.CSS_SELECTOR, f"#main > ol.pagination > li:nth-last-child(2) > a")
+
+last_page = int(last_page.text)
+# last_page = int(input("Number of pages in history? "))
 # print(last_page)
 
 works = []
