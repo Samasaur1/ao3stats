@@ -16,6 +16,10 @@ public struct Work: Codable {
     let mostRecentUpdate: String
     let changesSinceLastView: String
     let markedForLater: Bool
+    let complete: Bool
+    let relationships: [String]
+    let characters: [String]
+    let tags: [String]
 
     enum CodingKeys: String, CodingKey {
         case workID = "work_id"
@@ -27,6 +31,7 @@ public struct Work: Codable {
         case mostRecentUpdate = "most_recent_update"
         case changesSinceLastView = "changes_since_last_view"
         case markedForLater = "marked_for_later"
+        case complete, relationships, characters, tags
     }
 }
 
@@ -51,8 +56,9 @@ public struct DisplayStats: ParsableCommand {
         let allWorks: [Work]
         do {
             allWorks = try JSONDecoder().decode([Work].self, from: data)
-        } catch {
+        } catch let e {
             print("Unable to decode JSON")
+            print(e)
             throw ExitCode.failure
         }
 
@@ -82,12 +88,24 @@ public struct DisplayStats: ParsableCommand {
 
         var authorsToWorks = [String: [Work]]()
         var fandomsToWorks = [String: [Work]]()
+        var relationshipsToWorks = [String: [Work]]()
+        var charactersToWorks = [String: [Work]]()
+        var tagsToWorks = [String: [Work]]()
         for work in works {
             for author in work.authors {
                 authorsToWorks[author, default: []].append(work)
             }
             for fandom in work.fandoms {
                 fandomsToWorks[fandom, default: []].append(work)
+            }
+            for relationship in work.relationships {
+                relationshipsToWorks[relationship, default: []].append(work)
+            }
+            for character in work.characters {
+                charactersToWorks[character, default: []].append(work)
+            }
+            for tag in work.tags {
+                tagsToWorks[tag, default: []].append(work)
             }
         }
 //        print(authorsToWorks.mapValues(\.count).sorted { $0.value > $1.value }.map { "\($0): \($1)" }.joined(separator: "\n"))
@@ -142,6 +160,81 @@ public struct DisplayStats: ParsableCommand {
         topFandomsByProperty(mapper: { $0.map(\.wordCount).sum }, title: "unique words read")
         print("---")
         topFandomsByProperty(mapper: { $0.map { $0.wordCount * $0.viewCount }.sum }, title: "total words read")
+
+        print("===")
+        func generateStringForRelationship(_ relationship: String) -> String {
+            let fics = relationshipsToWorks[relationship]!
+            let uniqFicCount = fics.count
+            let ficCount = fics.map(\.viewCount).sum
+            let uniqWordCount = fics.map(\.wordCount).sum
+            let wordCount = fics.map { $0.wordCount * $0.viewCount }.sum
+            return "\(relationship): \(uniqFicCount) fics (read \(ficCount) times), totalling \(uniqWordCount) words (\(wordCount) words read)"
+        }
+        func topRelationshipsByProperty(mapper: ([Work]) -> Int, title: String) {
+            print("Top relationships (\(title)):")
+            let relationshipsByProperty = relationshipsToWorks.mapValues(mapper).sorted{ $0.value > $1.value }
+            let topRelationshipsByProperty = relationshipsByProperty.prefix(5).map { relationship, prop -> String in relationship }
+            let topRelationshipsByPropertyStrings = topRelationshipsByProperty.map(generateStringForRelationship)
+            print(topRelationshipsByPropertyStrings.joined(separator: "\n"))
+        }
+
+        topRelationshipsByProperty(mapper: \.count, title: "unique fics")
+        print("---")
+        topRelationshipsByProperty(mapper: { $0.map(\.viewCount).sum }, title: "total reads")
+        print("---")
+        topRelationshipsByProperty(mapper: { $0.map(\.wordCount).sum }, title: "unique words read")
+        print("---")
+        topRelationshipsByProperty(mapper: { $0.map { $0.wordCount * $0.viewCount }.sum }, title: "total words read")
+
+        print("===")
+        func generateStringForCharacter(_ character: String) -> String {
+            let fics = charactersToWorks[character]!
+            let uniqFicCount = fics.count
+            let ficCount = fics.map(\.viewCount).sum
+            let uniqWordCount = fics.map(\.wordCount).sum
+            let wordCount = fics.map { $0.wordCount * $0.viewCount }.sum
+            return "\(character): \(uniqFicCount) fics (read \(ficCount) times), totalling \(uniqWordCount) words (\(wordCount) words read)"
+        }
+        func topCharactersByProperty(mapper: ([Work]) -> Int, title: String) {
+            print("Top characters (\(title)):")
+            let charactersByProperty = charactersToWorks.mapValues(mapper).sorted{ $0.value > $1.value }
+            let topCharactersByProperty = charactersByProperty.prefix(5).map { character, prop -> String in character }
+            let topCharactersByPropertyStrings = topCharactersByProperty.map(generateStringForCharacter)
+            print(topCharactersByPropertyStrings.joined(separator: "\n"))
+        }
+
+        topCharactersByProperty(mapper: \.count, title: "unique fics")
+        print("---")
+        topCharactersByProperty(mapper: { $0.map(\.viewCount).sum }, title: "total reads")
+        print("---")
+        topCharactersByProperty(mapper: { $0.map(\.wordCount).sum }, title: "unique words read")
+        print("---")
+        topCharactersByProperty(mapper: { $0.map { $0.wordCount * $0.viewCount }.sum }, title: "total words read")
+
+        print("===")
+        func generateStringForTag(_ tag: String) -> String {
+            let fics = tagsToWorks[tag]!
+            let uniqFicCount = fics.count
+            let ficCount = fics.map(\.viewCount).sum
+            let uniqWordCount = fics.map(\.wordCount).sum
+            let wordCount = fics.map { $0.wordCount * $0.viewCount }.sum
+            return "\(tag): \(uniqFicCount) fics (read \(ficCount) times), totalling \(uniqWordCount) words (\(wordCount) words read)"
+        }
+        func topTagsByProperty(mapper: ([Work]) -> Int, title: String) {
+            print("Top tags (\(title)):")
+            let tagsByProperty = tagsToWorks.mapValues(mapper).sorted{ $0.value > $1.value }
+            let topTagsByProperty = tagsByProperty.prefix(5).map { tag, prop -> String in tag }
+            let topTagsByPropertyStrings = topTagsByProperty.map(generateStringForTag)
+            print(topTagsByPropertyStrings.joined(separator: "\n"))
+        }
+
+        topTagsByProperty(mapper: \.count, title: "unique fics")
+        print("---")
+        topTagsByProperty(mapper: { $0.map(\.viewCount).sum }, title: "total reads")
+        print("---")
+        topTagsByProperty(mapper: { $0.map(\.wordCount).sum }, title: "unique words read")
+        print("---")
+        topTagsByProperty(mapper: { $0.map { $0.wordCount * $0.viewCount }.sum }, title: "total words read")
 
         print("===")
         if let author = author, let works = authorsToWorks[author] {

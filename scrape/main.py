@@ -50,7 +50,11 @@ class Work:
                  most_recent_update: str,
                  changes_since_last_view: str,
                  rating: str,
-                 chapters: str):
+                 chapters: str,
+                 complete: bool,
+                 relationships: list[str],
+                 characters: list[str],
+                 tags: list[str]):
         self.work_id = work_id
         self.title = title
         self.authors = authors
@@ -65,6 +69,10 @@ class Work:
         self.changes_since_last_view = changes_since_last_view
         self.rating = rating
         self.chapters = chapters
+        self.complete = complete
+        self.relationships = relationships
+        self.characters = characters
+        self.tags = tags
 
 def process_page():
     global deleted_works
@@ -100,6 +108,10 @@ def process_work(work) -> Work | None:
     most_recent_update = ""
     changes_since_last_view = ""
     marked_for_later = False
+    complete = False
+    relationships = []
+    characters = []
+    tags = []
 
     lines = work.text.split('\n')
     # print(lines)
@@ -144,6 +156,12 @@ def process_work(work) -> Work | None:
     _rating = work.find_element(By.CSS_SELECTOR, "div.header.module > ul.required-tags span.rating")
     rating = _rating.get_attribute("title")
 
+    complete = "complete-yes" in work.find_element(By.CSS_SELECTOR, "div.header.module > ul.required-tags span.iswip").get_attribute("class")
+
+    relationships = [x.text for x in work.find_elements(By.CSS_SELECTOR, "ul.tags.commas > li.relationships")]
+    characters = [x.text for x in work.find_elements(By.CSS_SELECTOR, "ul.tags.commas > li.characters")]
+    tags = [x.text for x in work.find_elements(By.CSS_SELECTOR, "ul.tags.commas > li.freeforms")]
+
     _wc = work.find_element(By.CSS_SELECTOR, "dl.stats > dd.words").text
     if _wc == "":
         word_count = 0
@@ -170,7 +188,7 @@ def process_work(work) -> Work | None:
 
     most_recent_update = work.find_element(By.CSS_SELECTOR, "div.header.module > p.datetime").text
 
-    current_work = Work(work_id, title, authors, giftees, fandoms, series, word_count, view_count, marked_for_later, last_visit, most_recent_update, changes_since_last_view, rating, chapters)
+    current_work = Work(work_id, title, authors, giftees, fandoms, series, word_count, view_count, marked_for_later, last_visit, most_recent_update, changes_since_last_view, rating, chapters, complete, relationships, characters, tags)
     return current_work
 
 process_page()
