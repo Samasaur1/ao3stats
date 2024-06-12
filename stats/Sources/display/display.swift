@@ -42,6 +42,8 @@ public struct DisplayStats: ParsableCommand {
     @Option var fandom: String? = nil
     @Option var work: String? = nil
 
+    @Option var mostReadN: Int? = nil
+
     public init() {}
 
     public func run() throws {
@@ -68,9 +70,10 @@ public struct DisplayStats: ParsableCommand {
         guard let longestWork = works.max(by: { $0.wordCount < $1.wordCount }) else {
             fatalError()
         }
-        guard let mostReadFic = works.max(by: { $0.viewCount < $1.viewCount }) else {
-            fatalError()
-        }
+        let byVC = works.sorted(by: { $0.viewCount > $1.viewCount })
+        let mostReadFic = byVC[0]
+        let byProduct = works.sorted(by: { $0.viewCount * $0.wordCount > $1.viewCount * $1.wordCount })
+        let mostReadFicByWordCount = byProduct[0]
         let uniqueFicCount = works.count
         let ficCount = works.map(\.viewCount).sum
         let uniqueWordCount = works.map(\.wordCount).sum
@@ -82,9 +85,20 @@ public struct DisplayStats: ParsableCommand {
               uniq_word_count: \(uniqueWordCount)
               word_count: \(wordCount)
               most_read_fic: "\(mostReadFic.title)" by \(mostReadFic.authors.joined(separator: ", ")) (\(mostReadFic.viewCount)x)
+              most_read_fic_by_word_count: "\(mostReadFicByWordCount.title)" by \(mostReadFicByWordCount.authors.joined(separator: ", ")) (\(mostReadFicByWordCount.viewCount)x \(mostReadFicByWordCount.wordCount) words = \(mostReadFicByWordCount.viewCount * mostReadFicByWordCount.wordCount) words)
               longest_fic: "\(longestWork.title)" by \(longestWork.authors.joined(separator: ", ")) (\(longestWork.wordCount) words)
               """)
         print("===")
+
+        if let n = mostReadN {
+            for i in 1..<n {
+                print("""
+                most_read_fic [\(i)]: "\(byVC[i].title)" by \(byVC[i].authors.joined(separator: ", ")) (\(byVC[i].viewCount)x)
+                most_read_fic_by_word_count [\(i)]: "\(byProduct[i].title)" by \(byProduct[i].authors.joined(separator: ", ")) (\(byProduct[i].viewCount)x \(byProduct[i].wordCount) words = \(byProduct[i].viewCount * byProduct[i].wordCount) words)
+                """)
+            }
+            print("===")
+        }
 
         var authorsToWorks = [String: [Work]]()
         var fandomsToWorks = [String: [Work]]()
