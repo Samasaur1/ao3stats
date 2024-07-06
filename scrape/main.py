@@ -6,8 +6,10 @@ from tqdm import tqdm
 import requests
 from bs4 import BeautifulSoup
 
-USERNAME = input("Username? ")
-PASSWORD = input("Password? ")
+from os import environ
+
+USERNAME = environ['USERNAME'] if 'USERNAME' in environ.keys() else input("Username? ")
+PASSWORD = environ['PASSWORD'] if 'PASSWORD' in environ.keys() else input("Password? ")
 
 s = requests.Session()
 
