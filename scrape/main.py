@@ -8,8 +8,17 @@ from bs4 import BeautifulSoup
 
 from os import environ
 
+VERBOSE = 'VERBOSE' in environ.keys()
+def verbose(*args) -> None:
+    """Print the specified args only if $VERBOSE is set."""
+
+    if VERBOSE:
+        print("verbose:", *args)
+
 USERNAME = environ['USERNAME'] if 'USERNAME' in environ.keys() else input("Username? ")
 PASSWORD = environ['PASSWORD'] if 'PASSWORD' in environ.keys() else input("Password? ")
+
+verbose("Logging in to AO3")
 
 s = requests.Session()
 
@@ -26,10 +35,8 @@ resp = s.post('https://archiveofourown.org/users/login', params={
 
 soup = BeautifulSoup(resp.text, features='html.parser')
 
-print(soup.body['class'])
-
 if 'logged-out' in soup.body['class']:
-    print("Login failure; trying again with same creds (this happens sometimes)")
+    # It seems to take two tries to login every single time. Whatever
     authenticity_token = soup.find('input', {'name': 'authenticity_token'})['value']
     resp = s.post('https://archiveofourown.org/users/login', params={
         'authenticity_token': authenticity_token,
@@ -40,7 +47,9 @@ if 'logged-out' in soup.body['class']:
 
 if 'logged-in' not in soup.body['class']:
     print("Failed to log in. Check your username/password")
-    exit(0)
+    exit(1)
+
+verbose(f"Fetching history page for {USERNAME}")
 
 resp = s.get(f"https://archiveofourown.org/users/{USERNAME}/readings")
 soup = BeautifulSoup(resp.text, features='html.parser')
@@ -49,7 +58,7 @@ soup = BeautifulSoup(resp.text, features='html.parser')
 last_page = soup.select_one("#main > ol.pagination > li:nth-last-child(2) > a")
 last_page = int(last_page.text)
 
-print(f"Number of pages in history: {last_page}")
+verbose(f"Detected {last_page} pages in history")
 
 works = []
 deleted_works = 0
@@ -108,7 +117,7 @@ def process_page(page):
             page = BeautifulSoup(resp.text, features='html.parser')
             continue
     page_works = soup.select("#main > ol.reading > li.work")
-    for work in tqdm(page_works, desc="Processing works on page", leave=False):
+    for work in page_works:
         w = process_work(work)
         if w is None:
             deleted_works += 1
@@ -219,12 +228,20 @@ def process_work(work) -> Work | None:
     current_work = Work(work_id, title, authors, giftees, fandoms, series, word_count, view_count, marked_for_later, last_visit, most_recent_update, changes_since_last_view, rating, chapters, complete, relationships, characters, tags)
     return current_work
 
+verbose("Processing page 1")
 process_page(soup)
 
-for i in tqdm(range(2, last_page + 1), desc="Processing pages"):
-    resp = s.get(f"https://archiveofourown.org/users/{USERNAME}/readings?page={i}")
-    soup = BeautifulSoup(resp.text, features='html.parser')
-    process_page(soup)
+if VERBOSE:
+    for i in range(2, last_page + 1):
+        verbose(f"Processing page {i}")
+        resp = s.get(f"https://archiveofourown.org/users/{USERNAME}/readings?page={i}")
+        soup = BeautifulSoup(resp.text, features='html.parser')
+        process_page(soup)
+else:
+    for i in tqdm(range(2, last_page + 1), desc="Processing pages"):
+        resp = s.get(f"https://archiveofourown.org/users/{USERNAME}/readings?page={i}")
+        soup = BeautifulSoup(resp.text, features='html.parser')
+        process_page(soup)
 
 print(f"{deleted_works} deleted work(s)")
 
@@ -235,6 +252,8 @@ print(f"{deleted_works} deleted work(s)")
 
 with open("works.json", "w") as file:
     json.dump([work.__dict__ for work in works], file, indent=4)
+with open("deleted-works.txt", "w") as file:
+    file.write(deleted_works)
 
 # Word count: `li.work > dl.stats > dd.words` (must parse to int)
 # author: `li.work > div.header.module > h4.heading > a[rel="author"]` (str, optionally ensure href does not have gift)
