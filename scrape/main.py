@@ -254,7 +254,7 @@ print(f"{deleted_works} deleted work(s)")
 with open("works.json", "w") as file:
     json.dump([work.__dict__ for work in works], file, indent=4)
 with open("deleted-works.txt", "w") as file:
-    file.write(deleted_works)
+    file.write(f"{deleted_works} deleted work(s)\n")
 
 # Word count: `li.work > dl.stats > dd.words` (must parse to int)
 # author: `li.work > div.header.module > h4.heading > a[rel="author"]` (str, optionally ensure href does not have gift)
