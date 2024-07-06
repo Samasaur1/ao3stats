@@ -1,36 +1,53 @@
 import json
 import time
 
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.common.exceptions import NoSuchElementException
-
 from tqdm import tqdm
-# import itertools
 
-usr = input("Username? ")
+import requests
+from bs4 import BeautifulSoup
 
-driver = webdriver.Firefox()
+USERNAME = input("Username? ")
+PASSWORD = input("Password? ")
 
-driver.get("https://archiveofourown.org")
+s = requests.Session()
 
-# cb = WebDriverWait(driver, timeout=10).until(lambda d: d.find_element(By.ID, "tos_agree"))
-# cb.click()
-#
-# btn = WebDriverWait(driver, timeout=3).until(lambda d: d.find_element(By.CSS_SELECTOR, "#accept_tos:not([disabled])"))
-# btn.click()
+resp = s.get('https://archiveofourown.org')
+soup = BeautifulSoup(resp.text, features='html.parser')
 
-input("Please sign in, then press Enter")
+authenticity_token = soup.find('input', {'name': 'authenticity_token'})['value']
 
-driver.get(f"https://archiveofourown.org/users/{usr}/readings")
+resp = s.post('https://archiveofourown.org/users/login', params={
+    'authenticity_token': authenticity_token,
+    'user[login]': USERNAME,
+    'user[password]': PASSWORD
+})
 
-WebDriverWait(driver, timeout=3).until(lambda d: d.find_element(By.CSS_SELECTOR, "#main ol.pagination"))
-last_page = driver.find_element(By.CSS_SELECTOR, f"#main > ol.pagination > li:nth-last-child(2) > a")
+soup = BeautifulSoup(resp.text, features='html.parser')
 
+print(soup.body['class'])
+
+if 'logged-out' in soup.body['class']:
+    print("Login failure; trying again with same creds (this happens sometimes)")
+    authenticity_token = soup.find('input', {'name': 'authenticity_token'})['value']
+    resp = s.post('https://archiveofourown.org/users/login', params={
+        'authenticity_token': authenticity_token,
+        'user[login]': USERNAME,
+        'user[password]': PASSWORD
+    })
+    soup = BeautifulSoup(resp.text, features='html.parser')
+
+if 'logged-in' not in soup.body['class']:
+    print("Failed to log in. Check your username/password")
+    exit(0)
+
+resp = s.get(f"https://archiveofourown.org/users/{USERNAME}/readings")
+soup = BeautifulSoup(resp.text, features='html.parser')
+
+# last_page = soup.find(id='main').
+last_page = soup.select_one("#main > ol.pagination > li:nth-last-child(2) > a")
 last_page = int(last_page.text)
-# last_page = int(input("Number of pages in history? "))
-# print(last_page)
+
+print(f"Number of pages in history: {last_page}")
 
 works = []
 deleted_works = 0
@@ -74,19 +91,21 @@ class Work:
         self.characters = characters
         self.tags = tags
 
-def process_page():
+def process_page(page):
     global deleted_works
     while True:
-        try:
-            WebDriverWait(driver, timeout=3).until(lambda d: d.find_element(By.CSS_SELECTOR, "#main ol.reading"))
+        if page.select_one("#main ol.reading") is not None:
             break
-        except:
+        else:
+            print(resp.headers['Retry-after'])
+            breakpoint()
             # print("Could not fetch page; presumably we are rate-limited")
             # print("Sleeping for 5 minutes")
             time.sleep(5 * 60)
-            driver.refresh()
+            resp = s.get(resp.url)
+            page = BeautifulSoup(resp.text, features='html.parser')
             continue
-    page_works = driver.find_elements(By.CSS_SELECTOR, f"#main > ol.reading > li.work")
+    page_works = soup.select("#main > ol.reading > li.work")
     for work in tqdm(page_works, desc="Processing works on page", leave=False):
         w = process_work(work)
         if w is None:
@@ -113,72 +132,79 @@ def process_work(work) -> Work | None:
     characters = []
     tags = []
 
-    lines = work.text.split('\n')
-    # print(lines)
-    if len(lines) == 1 and "Deleted work" in lines[0]:
-        # deleted_works += 1
+    visit_info = work.select_one("h4.viewed.heading")
+    visit_info_lines = visit_info.text.split('\n')
+    if len(visit_info_lines) == 3 and '(Deleted work,' in visit_info_lines[1]:
+        # This is a deleted work
         return None
-    visits = lines[-1]
-    # print(visits)
-    if "(Marked for Later.)" in visits:
+
+    if "(Marked for Later.)" in visit_info.text:
         marked_for_later = True
-    words = visits.split(' ')
+
+    visits = visit_info_lines[-3 if marked_for_later else -2]  # should look like "Visited 2 times"
+
     if "once" in visits:
         view_count = 1
     else:
-        view_count = int(words[-5 if marked_for_later else -2])
+        try:
+            view_count = int(visits.split(' ')[1])
+        except ValueError:
+            # should never happen
+            breakpoint()
 
-    last_visit = " ".join(words[2:5])
-    changes_since_last_view = visits.split('(')[1].split(')')[0]
+    last_visit = visit_info_lines[1][14:]
+    changes_since_last_view = visit_info_lines[2][1:-1]
 
-    work_id = work.get_attribute("id").split('_')[1]
+    work_id = work['id'].split('_')[1]
 
-    _authors = work.find_elements(By.CSS_SELECTOR, "div.header.module > h4.heading > a[rel=\"author\"]")
+    _authors = work.select("div.header.module > h4.heading > a[rel=\"author\"]")
     if len(_authors) == 0:
         authors = []
     else:
         authors = [aut.text for aut in _authors]
 
     try:
-        title = work.find_element(By.CSS_SELECTOR, "div.header.module > h4.heading > a[href^=\"/works/\"]").text
-    except NoSuchElementException:
-        # TODO: generally this means the fic has been moved to a hidden collection
-        # print("no fic name?")
-        # print(lines)
-        return
+        title = work.select_one("div.header.module > h4.heading > a[href^=\"/works/\"]").text
+    except AttributeError:
+        # generally this means the fic has been moved to a hidden collection
+        return None
+    except:
+        # unknown error but we should figure out what it is anyway
+        breakpoint()
+        return None
 
-    _giftees = work.find_elements(By.CSS_SELECTOR, "div.header.module > h4.heading > a[href$=\"/gifts\"]")
+    _giftees = work.select("div.header.module > h4.heading > a[href$=\"/gifts\"]")
     giftees = [g.text for g in _giftees]
 
-    _fandoms = work.find_elements(By.CSS_SELECTOR, "div.header.module > h5.fandoms.heading > a[href^=\"/tags/\"]")
+    _fandoms = work.select("div.header.module > h5.fandoms.heading > a[href^=\"/tags/\"]")
     fandoms = [fd.text for fd in _fandoms]
 
-    _rating = work.find_element(By.CSS_SELECTOR, "div.header.module > ul.required-tags span.rating")
-    rating = _rating.get_attribute("title")
+    _rating = work.select_one("div.header.module > ul.required-tags span.rating")
+    rating = _rating['title']
 
-    complete = "complete-yes" in work.find_element(By.CSS_SELECTOR, "div.header.module > ul.required-tags span.iswip").get_attribute("class")
+    complete = "complete-yes" in work.select_one("div.header.module > ul.required-tags span.iswip")['class']
 
-    relationships = [x.text for x in work.find_elements(By.CSS_SELECTOR, "ul.tags.commas > li.relationships")]
-    characters = [x.text for x in work.find_elements(By.CSS_SELECTOR, "ul.tags.commas > li.characters")]
-    tags = [x.text for x in work.find_elements(By.CSS_SELECTOR, "ul.tags.commas > li.freeforms")]
+    relationships = [x.text for x in work.select("ul.tags.commas > li.relationships")]
+    characters = [x.text for x in work.select("ul.tags.commas > li.characters")]
+    tags = [x.text for x in work.select("ul.tags.commas > li.freeforms")]
 
-    _wc = work.find_element(By.CSS_SELECTOR, "dl.stats > dd.words").text
+    _wc = work.select_one("dl.stats > dd.words").text
     if _wc == "":
         word_count = 0
         print(f"ERROR: no word count for fic '{title}'")
     else:
         word_count = int(_wc.replace(",", ""))
 
-    chapters = work.find_element(By.CSS_SELECTOR, "dl.stats > dd.chapters").text
+    chapters = work.select_one("dl.stats > dd.chapters").text
 
     series = {}
-    series_elements = work.find_elements(By.CSS_SELECTOR, "ul.series > li")
+    series_elements = work.select("ul.series > li")
     # print(series_elements)
     # print([x.text for x in series_elements])
     for series_element in series_elements:
-        _number = series_element.find_element(By.CSS_SELECTOR, "strong").text
+        _number = series_element.select_one("strong").text
         number = int(_number.replace(",", ""))
-        name = series_element.find_element(By.CSS_SELECTOR, "a").text
+        name = series_element.select_one("a").text
         series[name] = number
         # print(_number)
         # print(number)
@@ -186,16 +212,17 @@ def process_work(work) -> Work | None:
 
     # print(series)
 
-    most_recent_update = work.find_element(By.CSS_SELECTOR, "div.header.module > p.datetime").text
+    most_recent_update = work.select_one("div.header.module > p.datetime").text
 
     current_work = Work(work_id, title, authors, giftees, fandoms, series, word_count, view_count, marked_for_later, last_visit, most_recent_update, changes_since_last_view, rating, chapters, complete, relationships, characters, tags)
     return current_work
 
-process_page()
+process_page(soup)
 
 for i in tqdm(range(2, last_page + 1), desc="Processing pages"):
-    driver.get(f"https://archiveofourown.org/users/{usr}/readings?page={i}")
-    process_page()
+    resp = s.get(f"https://archiveofourown.org/users/{USERNAME}/readings?page={i}")
+    soup = BeautifulSoup(resp.text, features='html.parser')
+    process_page(soup)
 
 print(f"{deleted_works} deleted work(s)")
 
@@ -206,8 +233,6 @@ print(f"{deleted_works} deleted work(s)")
 
 with open("works.json", "w") as file:
     json.dump([work.__dict__ for work in works], file, indent=4)
-
-driver.quit()
 
 # Word count: `li.work > dl.stats > dd.words` (must parse to int)
 # author: `li.work > div.header.module > h4.heading > a[rel="author"]` (str, optionally ensure href does not have gift)
