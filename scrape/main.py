@@ -21,6 +21,7 @@ PASSWORD = environ['PASSWORD'] if 'PASSWORD' in environ.keys() else input("Passw
 verbose("Logging in to AO3")
 
 s = requests.Session()
+s.headers['User-Agent'] = "historybot/0.1.0"  # AO3 requests that we include this string in our user agent
 
 resp = s.get('https://archiveofourown.org')
 soup = BeautifulSoup(resp.text, features='html.parser')
