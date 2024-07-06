@@ -34,8 +34,9 @@ stdenv.mkDerivation {
   '';
   
   meta = with lib; {
-    # description = "run arbitrary commands on system theme changes";
-    # homepage = "https://github.com/Samasaur1/dmn";
+    description = "Display statistics generated from your AO3 history";
+    homepage = "https://github.com/Samasaur1/ao3stats";
     platforms = platforms.darwin;
+    mainPrograms = "stats";
   };
 }
