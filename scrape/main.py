@@ -23,6 +23,17 @@ verbose("Logging in to AO3")
 s = requests.Session()
 s.headers['User-Agent'] = "historybot/0.1.0"  # AO3 requests that we include this string in our user agent
 
+def retry_after(r, *args, **kwargs):
+    if r.status_code == 429:
+        print("HTTP 429 Too Many Requests")
+        delay = int(r.headers['Retry-After'])
+        print(f"Sleeping {delay} seconds")
+        time.sleep(delay)
+        print("Retrying request")
+        return s.send(r.request)
+
+s.hooks['response'].append(retry_after)
+
 resp = s.get('https://archiveofourown.org')
 soup = BeautifulSoup(resp.text, features='html.parser')
 
@@ -105,18 +116,6 @@ class Work:
 
 def process_page(page):
     global deleted_works
-    while True:
-        if page.select_one("#main ol.reading") is not None:
-            break
-        else:
-            print(resp.headers['Retry-after'])
-            breakpoint()
-            # print("Could not fetch page; presumably we are rate-limited")
-            # print("Sleeping for 5 minutes")
-            time.sleep(5 * 60)
-            resp = s.get(resp.url)
-            page = BeautifulSoup(resp.text, features='html.parser')
-            continue
     page_works = soup.select("#main > ol.reading > li.work")
     for work in page_works:
         w = process_work(work)
