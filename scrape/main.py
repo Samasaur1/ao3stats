@@ -25,11 +25,11 @@ s.headers['User-Agent'] = "historybot/0.1.0"  # AO3 requests that we include thi
 
 def retry_after(r, *args, **kwargs):
     if r.status_code == 429:
-        print("HTTP 429 Too Many Requests")
+        verbose("HTTP 429 Too Many Requests")
         delay = int(r.headers['Retry-After'])
-        print(f"Sleeping {delay} seconds")
+        verbose(f"Sleeping {delay} seconds")
         time.sleep(delay)
-        print("Retrying request")
+        verbose("Retrying request")
         return s.send(r.request)
 
 s.hooks['response'].append(retry_after)
