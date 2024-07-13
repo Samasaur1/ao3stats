@@ -8,6 +8,8 @@ from bs4 import BeautifulSoup
 
 from os import environ
 
+import getpass
+
 VERBOSE = 'VERBOSE' in environ.keys()
 def verbose(*args) -> None:
     """Print the specified args only if $VERBOSE is set."""
@@ -16,7 +18,7 @@ def verbose(*args) -> None:
         print("verbose:", *args)
 
 USERNAME = environ['USERNAME'] if 'USERNAME' in environ.keys() else input("Username? ")
-PASSWORD = environ['PASSWORD'] if 'PASSWORD' in environ.keys() else input("Password? ")
+PASSWORD = environ['PASSWORD'] if 'PASSWORD' in environ.keys() else getpass.getpass("Password? ")
 
 verbose("Logging in to AO3")
 
