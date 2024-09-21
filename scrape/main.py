@@ -51,6 +51,19 @@ soup = BeautifulSoup(resp.text, features='html.parser')
 
 if 'logged-out' in soup.body['class']:
     # It seems to take two tries to login every single time. Whatever
+    verbose("First login attempt failed (this is normal; trying again)")
+    time.sleep(1)
+    authenticity_token = soup.find('input', {'name': 'authenticity_token'})['value']
+    resp = s.post('https://archiveofourown.org/users/login', params={
+        'authenticity_token': authenticity_token,
+        'user[login]': USERNAME,
+        'user[password]': PASSWORD
+    })
+    soup = BeautifulSoup(resp.text, features='html.parser')
+
+if 'logged-out' in soup.body['class']:
+    verbose("Second login attempt failed (trying again)")
+    time.sleep(2)
     authenticity_token = soup.find('input', {'name': 'authenticity_token'})['value']
     resp = s.post('https://archiveofourown.org/users/login', params={
         'authenticity_token': authenticity_token,
