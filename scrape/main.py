@@ -159,15 +159,28 @@ def process_work(work) -> Work | None:
     tags = []
 
     visit_info = work.select_one("h4.viewed.heading")
-    visit_info_lines = visit_info.text.split('\n')
-    if len(visit_info_lines) == 3 and '(Deleted work,' in visit_info_lines[1]:
-        # This is a deleted work
-        return None
+    # should look like ['Last visited: 24 Oct 2024', '(Latest version.)', 'Visited once']
+    visit_info_lines = [x for x in (y.strip() for y in visit_info.text.split('\n')) if x != '']
+    print(visit_info_lines)
+    match len(visit_info_lines):
+        case 1:
+            if '(Deleted work,' in visit_info_lines[0]:
+                # This is a deleted work
+                return None
+            else:
+                breakpoint()
+        case 3:
+            # normal
+            pass
+        case 4:
+            if visit_info_lines[3] == "(Marked for Later.)":
+                marked_for_later = True
+            else:
+                breakpoint()
+        case _:
+            breakpoint()
 
-    if "(Marked for Later.)" in visit_info.text:
-        marked_for_later = True
-
-    visits = visit_info_lines[-3 if marked_for_later else -2]  # should look like "Visited 2 times"
+    visits = visit_info_lines[2]  # should look like "Visited 2 times"
 
     if "once" in visits:
         view_count = 1
@@ -178,8 +191,8 @@ def process_work(work) -> Work | None:
             # should never happen
             breakpoint()
 
-    last_visit = visit_info_lines[1][14:]
-    changes_since_last_view = visit_info_lines[2][1:-1]
+    last_visit = visit_info_lines[0][14:]
+    changes_since_last_view = visit_info_lines[1][1:-1]
 
     work_id = work['id'].split('_')[1]
 
