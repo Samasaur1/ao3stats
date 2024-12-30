@@ -138,13 +138,13 @@ def process_page(page) -> bool:
     page_works = soup.select("#main > ol.reading > li.work")
     for work in page_works:
         w = process_work(work)
-        if AO3STATS_STOP_AFTER is not None:
-            if AO3STATS_STOP_AFTER in w.last_visit:
-                verbose("Hit stop date; stopping page")
-                return True
         if w is None:
             deleted_works += 1
         else:
+            if AO3STATS_STOP_AFTER is not None:
+                if AO3STATS_STOP_AFTER in w.last_visit:
+                    verbose("Hit stop date; stopping page")
+                    return True
             works.append(w)
     return False
 
