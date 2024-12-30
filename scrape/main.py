@@ -10,6 +10,10 @@ from os import environ
 
 import getpass
 
+AO3STATS_STOP_AFTER = environ.get('AO3STATS_STOP_AFTER')
+if AO3STATS_STOP_AFTER is not None:
+    print(f"Stopping once a date matches {AO3STATS_STOP_AFTER}")
+
 VERBOSE = 'VERBOSE' in environ.keys()
 def verbose(*args) -> None:
     """Print the specified args only if $VERBOSE is set."""
@@ -129,15 +133,20 @@ class Work:
         self.characters = characters
         self.tags = tags
 
-def process_page(page):
+def process_page(page) -> bool:
     global deleted_works
     page_works = soup.select("#main > ol.reading > li.work")
     for work in page_works:
         w = process_work(work)
+        if AO3STATS_STOP_AFTER is not None:
+            if AO3STATS_STOP_AFTER in w.last_visit:
+                verbose("Hit stop date; stopping page")
+                return True
         if w is None:
             deleted_works += 1
         else:
             works.append(w)
+    return False
 
 def process_work(work) -> Work | None:
     work_id = ""
@@ -257,19 +266,22 @@ def process_work(work) -> Work | None:
     return current_work
 
 verbose("Processing page 1")
-process_page(soup)
-
-if VERBOSE:
-    for i in range(2, last_page + 1):
-        verbose(f"Processing page {i}")
-        resp = s.get(f"https://archiveofourown.org/users/{USERNAME}/readings?page={i}")
-        soup = BeautifulSoup(resp.text, features='html.parser')
-        process_page(soup)
-else:
-    for i in tqdm(range(2, last_page + 1), desc="Processing pages"):
-        resp = s.get(f"https://archiveofourown.org/users/{USERNAME}/readings?page={i}")
-        soup = BeautifulSoup(resp.text, features='html.parser')
-        process_page(soup)
+if not process_page(soup):
+    if VERBOSE:
+        for i in range(2, last_page + 1):
+            verbose(f"Processing page {i}")
+            resp = s.get(f"https://archiveofourown.org/users/{USERNAME}/readings?page={i}")
+            soup = BeautifulSoup(resp.text, features='html.parser')
+            if process_page(soup):
+                verbose("page stopped; breaking out of loop")
+                break
+    else:
+        for i in tqdm(range(2, last_page + 1), desc="Processing pages"):
+            resp = s.get(f"https://archiveofourown.org/users/{USERNAME}/readings?page={i}")
+            soup = BeautifulSoup(resp.text, features='html.parser')
+            if process_page(soup):
+                verbose("page stopped; breaking out of loop")
+                break
 
 print(f"{deleted_works} deleted work(s)")
 
