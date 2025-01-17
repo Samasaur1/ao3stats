@@ -37,6 +37,26 @@ def retry_after(r, *args, **kwargs):
         time.sleep(delay)
         verbose("Retrying request")
         return s.send(r.request)
+    elif r.status_code == 502:
+        verbose("HTTP 502 Bad Gateway")
+        if hasattr(r.request, 'fivezerotwo_backoff'):
+            verbose(f"Request has `fivezerotwo_backoff` property with value {r.request.fivezerotwo_backoff}")
+            verbose("Doubling backoff")
+            r.request.fivezerotwo_backoff *= 2
+            if r.request.fivezerotwo_backoff > 65:
+                verbose(f"Backoff is {r.request.fivezerotwo_backoff}, which is too long; failing")
+                return
+            verbose(f"Sleeping for {r.request.fivezerotwo_backoff}")
+            time.sleep(r.request.fivezerotwo_backoff)
+            verbose("Retrying request")
+            return s.send(r.request)
+        else:
+            verbose("Request does not have `fivezerotwo_backoff` property")
+            r.request.fivezerotwo_backoff = 1
+            verbose(f"Setting backoff to {r.request.fivezerotwo_backoff}s and sleeping")
+            time.sleep(r.request.fivezerotwo_backoff)
+            verbose("Retrying request")
+            return s.send(r.request)
 
 s.hooks['response'].append(retry_after)
 
