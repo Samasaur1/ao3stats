@@ -3,3 +3,5 @@ bin/
 lib/
 pyvenv.cfg
 outputs/
+works.json
+deleted-works.txt
