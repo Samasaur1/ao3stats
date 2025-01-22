@@ -190,7 +190,6 @@ def process_work(work) -> Work | None:
     visit_info = work.select_one("h4.viewed.heading")
     # should look like ['Last visited: 24 Oct 2024', '(Latest version.)', 'Visited once']
     visit_info_lines = [x for x in (y.strip() for y in visit_info.text.split('\n')) if x != '']
-    print(visit_info_lines)
     match len(visit_info_lines):
         case 1:
             if '(Deleted work,' in visit_info_lines[0]:
