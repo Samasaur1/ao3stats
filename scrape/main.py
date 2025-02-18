@@ -60,45 +60,24 @@ def retry_after(r, *args, **kwargs):
 
 s.hooks['response'].append(retry_after)
 
-resp = s.get('https://archiveofourown.org')
-soup = BeautifulSoup(resp.text, features='html.parser')
+# -- STOLEN FROM https://github.com/JimmXinu/FanFicFare/blob/5c703122ec9d9e028b47582b32c1c384222e0978/fanficfare/adapters/base_otw_adapter.py#L103-L130
+params = {}
+params['user[login]'] = USERNAME
+params['user[password]'] = PASSWORD
+params['user[remember_me]'] = '1'
+params['commit'] = 'Log in'
+params['utf8'] = u'\x2713'  # utf8 *is* required now.  hex code works better than actual character for some reason. u'✓'
 
-authenticity_token = soup.find('input', {'name': 'authenticity_token'})['value']
+# authenticity_token now comes from a completely separate json call.
+token_json = json.loads(s.get("https://archiveofourown.org/token_dispenser.json").text)
+params['authenticity_token'] = token_json['token']
 
-resp = s.post('https://archiveofourown.org/users/login', params={
-    'authenticity_token': authenticity_token,
-    'user[login]': USERNAME,
-    'user[password]': PASSWORD
-})
+resp = s.post('https://archiveofourown.org/users/login', params=params)
 
-soup = BeautifulSoup(resp.text, features='html.parser')
-
-if 'class' not in soup.body.attrs or 'logged-out' in soup.body['class']:
-    # It seems to take two tries to login every single time. Whatever
-    verbose("First login attempt failed (this is normal; trying again)")
-    time.sleep(1)
-    authenticity_token = soup.find('input', {'name': 'authenticity_token'})['value']
-    resp = s.post('https://archiveofourown.org/users/login', params={
-        'authenticity_token': authenticity_token,
-        'user[login]': USERNAME,
-        'user[password]': PASSWORD
-    })
-    soup = BeautifulSoup(resp.text, features='html.parser')
-
-if 'class' not in soup.body.attrs or 'logged-out' in soup.body['class']:
-    verbose("Second login attempt failed (trying again)")
-    time.sleep(2)
-    authenticity_token = soup.find('input', {'name': 'authenticity_token'})['value']
-    resp = s.post('https://archiveofourown.org/users/login', params={
-        'authenticity_token': authenticity_token,
-        'user[login]': USERNAME,
-        'user[password]': PASSWORD
-    })
-    soup = BeautifulSoup(resp.text, features='html.parser')
-
-if 'logged-in' not in soup.body['class']:
+if 'href="/users/logout"' not in resp.text:
     print("Failed to log in. Check your username/password")
     exit(1)
+# --- end of stolen code
 
 verbose(f"Fetching history page for {USERNAME}")
 
