@@ -37,8 +37,8 @@ def retry_after(r, *args, **kwargs):
         time.sleep(delay)
         verbose("Retrying request")
         return s.send(r.request)
-    elif r.status_code == 502:
-        verbose("HTTP 502 Bad Gateway")
+    elif r.status_code >= 500:
+        verbose(f"HTTP {r.status_code} (some server error)")
         if hasattr(r.request, 'fivezerotwo_backoff'):
             verbose(f"Request has `fivezerotwo_backoff` property with value {r.request.fivezerotwo_backoff}")
             verbose("Doubling backoff")
