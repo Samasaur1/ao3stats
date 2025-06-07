@@ -27,7 +27,7 @@ PASSWORD = environ['PASSWORD'] if 'PASSWORD' in environ.keys() else getpass.getp
 verbose("Logging in to AO3")
 
 s = requests.Session()
-s.headers['User-Agent'] = "historybot/0.1.0"  # AO3 requests that we include this string in our user agent
+s.headers['User-Agent'] = "historybot/0.2.0"  # AO3 requests that we include this string in our user agent
 
 def retry_after(r, *args, **kwargs):
     if r.status_code == 429:
