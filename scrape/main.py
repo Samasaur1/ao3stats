@@ -41,8 +41,8 @@ def retry_after(r, *args, **kwargs):
         verbose(f"HTTP {r.status_code} (some server error)")
         if hasattr(r.request, 'fivezerotwo_backoff'):
             verbose(f"Request has `fivezerotwo_backoff` property with value {r.request.fivezerotwo_backoff}")
-            verbose("Doubling backoff")
-            r.request.fivezerotwo_backoff *= 2
+            verbose("Scaling backoff by 1.25")
+            r.request.fivezerotwo_backoff *= 1.25
             if r.request.fivezerotwo_backoff > 65:
                 verbose(f"Backoff is {r.request.fivezerotwo_backoff}, which is too long; failing")
                 return
@@ -52,7 +52,7 @@ def retry_after(r, *args, **kwargs):
             return s.send(r.request)
         else:
             verbose("Request does not have `fivezerotwo_backoff` property")
-            r.request.fivezerotwo_backoff = 1
+            r.request.fivezerotwo_backoff = 0.1
             verbose(f"Setting backoff to {r.request.fivezerotwo_backoff}s and sleeping")
             time.sleep(r.request.fivezerotwo_backoff)
             verbose("Retrying request")
