@@ -65,8 +65,8 @@ params = {}
 params['user[login]'] = USERNAME
 params['user[password]'] = PASSWORD
 params['user[remember_me]'] = '1'
-params['commit'] = 'Log in'
-params['utf8'] = u'\x2713'  # utf8 *is* required now.  hex code works better than actual character for some reason. u'✓'
+# params['commit'] = 'Log in'
+# params['utf8'] = '\u2713'  # utf8 *is* required now.  hex code works better than actual character for some reason. u'✓'
 
 # authenticity_token now comes from a completely separate json call.
 token_json = json.loads(s.get("https://archiveofourown.org/token_dispenser.json").text)
