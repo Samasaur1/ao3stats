@@ -79,6 +79,8 @@ if 'href="/users/logout"' not in resp.text:
     exit(1)
 # --- end of stolen code
 
+verbose(f"Successfully logged in as {USERNAME}")
+
 verbose(f"Fetching history page for {USERNAME}")
 
 resp = s.get(f"https://archiveofourown.org/users/{USERNAME}/readings")
