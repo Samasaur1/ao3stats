@@ -10,6 +10,63 @@ from os import environ
 
 import getpass
 
+class Ao3Session:
+    def __init__(self):
+        self.session = requests.Session()
+        self.session.headers['User-Agent'] = "historybot/0.2.0"  # AO3 requests that we include this string in our user agent
+
+        def retry_after(r, *args, **kwargs):
+            if r.status_code == 429:
+                verbose("HTTP 429 Too Many Requests")
+                delay = int(r.headers['Retry-After'])
+                verbose(f"Sleeping {delay} seconds")
+                time.sleep(delay)
+                verbose("Retrying request")
+                return self.session.send(r.request)
+            elif r.status_code >= 500:
+                verbose(f"HTTP {r.status_code} (some server error)")
+                if hasattr(r.request, 'fivezerotwo_backoff'):
+                    verbose(f"Request has `fivezerotwo_backoff` property with value {r.request.fivezerotwo_backoff}")
+                    verbose("Scaling backoff by 1.25")
+                    r.request.fivezerotwo_backoff *= 1.25
+                    if r.request.fivezerotwo_backoff > 65:
+                        verbose(f"Backoff is {r.request.fivezerotwo_backoff}, which is too long; failing")
+                        return
+                    verbose(f"Sleeping for {r.request.fivezerotwo_backoff}")
+                    time.sleep(r.request.fivezerotwo_backoff)
+                    verbose("Retrying request")
+                    return self.session.send(r.request)
+                else:
+                    verbose("Request does not have `fivezerotwo_backoff` property")
+                    r.request.fivezerotwo_backoff = 0.1
+                    verbose(f"Setting backoff to {r.request.fivezerotwo_backoff}s and sleeping")
+                    time.sleep(r.request.fivezerotwo_backoff)
+                    verbose("Retrying request")
+                    return self.session.send(r.request)
+
+        self.session.hooks['response'].append(retry_after)
+
+    def get(self, *args, **kwargs):
+        return self.session.get(*args, **kwargs)
+
+    def post(self, *args, **kwargs):
+        return self.session.post(*args, **kwargs)
+
+    def login(self, username: str, password: str) -> bool:
+        # See https://github.com/JimmXinu/FanFicFare/blob/5c703122ec9d9e028b47582b32c1c384222e0978/fanficfare/adapters/base_otw_adapter.py#L103-L130
+        params = {}
+        params['user[login]'] = username
+        params['user[password]'] = password
+        params['user[remember_me]'] = '1'
+
+        # authenticity_token now comes from a completely separate json call.
+        token_json = json.loads(self.get("https://archiveofourown.org/token_dispenser.json").text)
+        params['authenticity_token'] = token_json['token']
+
+        resp = self.post('https://archiveofourown.org/users/login', params=params)
+
+        return 'href="/users/logout"' in resp.text
+
 AO3STATS_STOP_AFTER = environ.get('AO3STATS_STOP_AFTER')
 if AO3STATS_STOP_AFTER is not None:
     print(f"Stopping once a date matches {AO3STATS_STOP_AFTER}")
@@ -26,64 +83,17 @@ PASSWORD = environ['PASSWORD'] if 'PASSWORD' in environ.keys() else getpass.getp
 
 verbose("Logging in to AO3")
 
-s = requests.Session()
-s.headers['User-Agent'] = "historybot/0.2.0"  # AO3 requests that we include this string in our user agent
+ao3 = Ao3Session()
 
-def retry_after(r, *args, **kwargs):
-    if r.status_code == 429:
-        verbose("HTTP 429 Too Many Requests")
-        delay = int(r.headers['Retry-After'])
-        verbose(f"Sleeping {delay} seconds")
-        time.sleep(delay)
-        verbose("Retrying request")
-        return s.send(r.request)
-    elif r.status_code >= 500:
-        verbose(f"HTTP {r.status_code} (some server error)")
-        if hasattr(r.request, 'fivezerotwo_backoff'):
-            verbose(f"Request has `fivezerotwo_backoff` property with value {r.request.fivezerotwo_backoff}")
-            verbose("Scaling backoff by 1.25")
-            r.request.fivezerotwo_backoff *= 1.25
-            if r.request.fivezerotwo_backoff > 65:
-                verbose(f"Backoff is {r.request.fivezerotwo_backoff}, which is too long; failing")
-                return
-            verbose(f"Sleeping for {r.request.fivezerotwo_backoff}")
-            time.sleep(r.request.fivezerotwo_backoff)
-            verbose("Retrying request")
-            return s.send(r.request)
-        else:
-            verbose("Request does not have `fivezerotwo_backoff` property")
-            r.request.fivezerotwo_backoff = 0.1
-            verbose(f"Setting backoff to {r.request.fivezerotwo_backoff}s and sleeping")
-            time.sleep(r.request.fivezerotwo_backoff)
-            verbose("Retrying request")
-            return s.send(r.request)
-
-s.hooks['response'].append(retry_after)
-
-# -- STOLEN FROM https://github.com/JimmXinu/FanFicFare/blob/5c703122ec9d9e028b47582b32c1c384222e0978/fanficfare/adapters/base_otw_adapter.py#L103-L130
-params = {}
-params['user[login]'] = USERNAME
-params['user[password]'] = PASSWORD
-params['user[remember_me]'] = '1'
-# params['commit'] = 'Log in'
-# params['utf8'] = '\u2713'  # utf8 *is* required now.  hex code works better than actual character for some reason. u'✓'
-
-# authenticity_token now comes from a completely separate json call.
-token_json = json.loads(s.get("https://archiveofourown.org/token_dispenser.json").text)
-params['authenticity_token'] = token_json['token']
-
-resp = s.post('https://archiveofourown.org/users/login', params=params)
-
-if 'href="/users/logout"' not in resp.text:
+if not ao3.login(USERNAME, PASSWORD):
     print("Failed to log in. Check your username/password")
     exit(1)
-# --- end of stolen code
 
 verbose(f"Successfully logged in as {USERNAME}")
 
 verbose(f"Fetching history page for {USERNAME}")
 
-resp = s.get(f"https://archiveofourown.org/users/{USERNAME}/readings")
+resp = ao3.get(f"https://archiveofourown.org/users/{USERNAME}/readings")
 soup = BeautifulSoup(resp.text, features='html.parser')
 
 # last_page = soup.find(id='main').
@@ -270,14 +280,14 @@ if not process_page(soup):
     if VERBOSE:
         for i in range(2, last_page + 1):
             verbose(f"Processing page {i}")
-            resp = s.get(f"https://archiveofourown.org/users/{USERNAME}/readings?page={i}")
+            resp = ao3.get(f"https://archiveofourown.org/users/{USERNAME}/readings?page={i}")
             soup = BeautifulSoup(resp.text, features='html.parser')
             if process_page(soup):
                 verbose("page stopped; breaking out of loop")
                 break
     else:
         for i in tqdm(range(2, last_page + 1), desc="Processing pages"):
-            resp = s.get(f"https://archiveofourown.org/users/{USERNAME}/readings?page={i}")
+            resp = ao3.get(f"https://archiveofourown.org/users/{USERNAME}/readings?page={i}")
             soup = BeautifulSoup(resp.text, features='html.parser')
             if process_page(soup):
                 verbose("page stopped; breaking out of loop")
