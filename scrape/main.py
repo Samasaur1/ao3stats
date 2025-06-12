@@ -10,6 +10,13 @@ from os import environ
 
 import getpass
 
+VERBOSE = 'VERBOSE' in environ.keys()
+def verbose(*args) -> None:
+    """Print the specified args only if $VERBOSE is set."""
+
+    if VERBOSE:
+        print("verbose:", *args)
+
 class Ao3Session:
     def __init__(self):
         self.session = requests.Session()
@@ -70,13 +77,6 @@ class Ao3Session:
 AO3STATS_STOP_AFTER = environ.get('AO3STATS_STOP_AFTER')
 if AO3STATS_STOP_AFTER is not None:
     print(f"Stopping once a date matches {AO3STATS_STOP_AFTER}")
-
-VERBOSE = 'VERBOSE' in environ.keys()
-def verbose(*args) -> None:
-    """Print the specified args only if $VERBOSE is set."""
-
-    if VERBOSE:
-        print("verbose:", *args)
 
 USERNAME = environ['USERNAME'] if 'USERNAME' in environ.keys() else input("Username? ")
 PASSWORD = environ['PASSWORD'] if 'PASSWORD' in environ.keys() else getpass.getpass("Password? ")
