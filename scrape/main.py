@@ -54,10 +54,22 @@ class Ao3Session:
         self.session.hooks['response'].append(retry_after)
 
     def get(self, *args, **kwargs):
-        return self.session.get(*args, **kwargs)
+        for i in range(3):
+            try:
+                return self.session.get(*args, **kwargs)
+            except Exception as err:
+                verbose(f"Got error {err} while making request; retrying ({i+1}/3)")
+                continue
+        verbose("Failed to get even a status code 3 times; giving up")
 
     def post(self, *args, **kwargs):
-        return self.session.post(*args, **kwargs)
+        for i in range(3):
+            try:
+                return self.session.post(*args, **kwargs)
+            except Exception as err:
+                verbose(f"Got error {err} while making request; retrying ({i+1}/3)")
+                continue
+        verbose("Failed to get even a status code 3 times; giving up")
 
     def login(self, username: str, password: str) -> bool:
         # See https://github.com/JimmXinu/FanFicFare/blob/5c703122ec9d9e028b47582b32c1c384222e0978/fanficfare/adapters/base_otw_adapter.py#L103-L130
