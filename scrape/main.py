@@ -58,7 +58,7 @@ class Ao3Session:
             try:
                 return self.session.get(*args, **kwargs)
             except Exception as err:
-                verbose(f"Got error {err} while making request; retrying ({i+1}/3)")
+                verbose(f"Got error {err} while making request; retrying ({i + 1}/3)")
                 continue
         verbose("Failed to get even a status code 3 times; giving up")
 
@@ -67,7 +67,7 @@ class Ao3Session:
             try:
                 return self.session.post(*args, **kwargs)
             except Exception as err:
-                verbose(f"Got error {err} while making request; retrying ({i+1}/3)")
+                verbose(f"Got error {err} while making request; retrying ({i + 1}/3)")
                 continue
         verbose("Failed to get even a status code 3 times; giving up")
 
