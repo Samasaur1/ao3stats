@@ -84,7 +84,7 @@ class Ao3Session:
 
         resp = self.post('https://archiveofourown.org/users/login', params=params)
 
-        return 'href="/users/logout"' in resp.text
+        return 'href="/users/logout' in resp.text
 
 AO3STATS_STOP_AFTER = environ.get('AO3STATS_STOP_AFTER')
 if AO3STATS_STOP_AFTER is not None:
