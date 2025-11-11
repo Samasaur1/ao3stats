@@ -4,7 +4,7 @@ import time
 from tqdm import tqdm
 
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Comment
 
 from os import environ
 
@@ -136,7 +136,8 @@ class Work:
                  complete: bool,
                  relationships: list[str],
                  characters: list[str],
-                 tags: list[str]):
+                 tags: list[str],
+                 updated_at: int):
         self.work_id = work_id
         self.title = title
         self.authors = authors
@@ -155,6 +156,7 @@ class Work:
         self.relationships = relationships
         self.characters = characters
         self.tags = tags
+        self.updated_at = updated_at
 
 def process_page(page) -> bool:
     global deleted_works
@@ -189,6 +191,7 @@ def process_work(work) -> Work | None:
     relationships = []
     characters = []
     tags = []
+    updated_at = 0
 
     visit_info = work.select_one("h4.viewed.heading")
     # should look like ['Last visited: 24 Oct 2024', '(Latest version.)', 'Visited once']
@@ -283,8 +286,13 @@ def process_work(work) -> Work | None:
     # print(series)
 
     most_recent_update = work.select_one("div.header.module > p.datetime").text
+    updated_at_text = work.select_one("div.header.module").find(string=lambda text: isinstance(text, Comment))
+    if updated_at_text is None:
+        # Can't find the updated_at comment!
+        breakpoint()
+    updated_at = int(updated_at_text.split("=")[1])
 
-    current_work = Work(work_id, title, authors, giftees, fandoms, series, word_count, view_count, marked_for_later, last_visit, most_recent_update, changes_since_last_view, rating, chapters, complete, relationships, characters, tags)
+    current_work = Work(work_id, title, authors, giftees, fandoms, series, word_count, view_count, marked_for_later, last_visit, most_recent_update, changes_since_last_view, rating, chapters, complete, relationships, characters, tags, updated_at)
     return current_work
 
 verbose("Processing page 1")
