@@ -1,4 +1,4 @@
-{ lib, stdenv, swift, swiftpm, swiftpm2nix, darwin, ... }:
+{ lib, stdenv, swift, swiftpm, swiftpm2nix, ... }:
 
 let
   # Pass the generated files to the helper.
@@ -15,10 +15,6 @@ stdenv.mkDerivation {
   # This by default performs a release build using SwiftPM, essentially:
   #   swift build -c release
   nativeBuildInputs = [ swift swiftpm ];
-
-  buildInputs = [
-    darwin.apple_sdk.frameworks.Foundation
-  ];
 
   # The helper provides a configure snippet that will prepare all dependencies
   # in the correct place, where SwiftPM expects them.

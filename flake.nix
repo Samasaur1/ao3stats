@@ -1,6 +1,10 @@
 {
   description = "A Discord bot that watches RSS feeds";
 
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs";
+  };
+
   outputs = { self, nixpkgs, ... }:
     let
       forAllSystems = gen:
